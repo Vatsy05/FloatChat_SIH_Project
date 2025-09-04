@@ -1,0 +1,23 @@
+# Minimal working set - No ChromaDB dependency conflicts
+streamlit
+pandas
+numpy  
+plotly
+python-dotenv
+psycopg2-binary
+requests
+scikit-learn  # For TF-IDF similarity search
+
+# LangChain essentials (minimal)
+langchain-groq
+langchain-core
+
+# Database
+supabase
+
+# API server for Next.js integration
+fastapi
+uvicorn[standard]
+
+# Basic utilities
+json5
