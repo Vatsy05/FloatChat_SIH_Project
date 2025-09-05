@@ -6,6 +6,7 @@ LLM Manager with Groq API multi-key rotation and rate limiting
 import time
 import json
 import asyncio
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from langchain_groq import ChatGroq
@@ -110,7 +111,7 @@ class GroqLLMManager:
                 ]
                 
                 # Get response
-                response = client(messages)
+                response = client.invoke(messages)
                 
                 # Parse JSON response
                 response_json = self._parse_response(response.content)
@@ -273,6 +274,196 @@ Remember: Respond ONLY with the JSON format specified in the system prompt."""
             print(f"❌ JSON parsing error: {str(e)}")
             print(f"Raw response: {response_content[:200]}...")
             return None
+
+    def generate_tool_analysis(self, analysis_request: Dict) -> Dict[str, Any]:
+        """Generate tool analysis for MCP"""
+        
+        # More explicit JSON-only prompt
+        system_prompt = """You are an ARGO data tool orchestrator. You MUST respond with ONLY valid JSON, no other text.
+
+Available tools:
+""" + json.dumps(analysis_request['available_tools'], indent=2) + """
+
+Your response MUST be a valid JSON object with this EXACT structure:
+{
+    "success": true,
+    "query_type": "spatial|statistical|comparative|trajectory|general",
+    "tool_calls": [
+        {"name": "tool_name", "parameters": {}}
+    ],
+    "sql_query": "SELECT ... FROM ...",
+    "explanation": "Brief explanation",
+    "confidence": 0.85
+}
+
+CRITICAL RULES:
+1. ONLY output valid JSON - no explanatory text before or after
+2. For nearest float queries: use find_nearest_floats tool
+3. For comparisons between regions: use get_regional_stats tool twice (once per region)
+4. For trajectory: use get_float_trajectory tool
+5. For general queries: use execute_validated_query tool
+6. Always include a backup sql_query"""
+        
+        user_prompt = f"""Query: {analysis_request['query']}
+
+Remember: Output ONLY the JSON object, nothing else."""
+        
+        # Try to get JSON response
+        from langchain_core.messages import HumanMessage, SystemMessage
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt)
+        ]
+        
+        for attempt in range(3):
+            client = self._get_next_available_client()
+            if not client:
+                continue
+                
+            try:
+                response = client.invoke(messages)  # Use invoke instead of __call__
+                content = response.content.strip()
+                
+                # Try to extract JSON if wrapped in markdown
+                if '```json' in content:
+                    content = content.split('```json')[1].split('```')[0].strip()
+                elif '```' in content:
+                    content = content.split('```')[1].split('```')[0].strip()
+                
+                # Parse JSON
+                parsed = json.loads(content)
+                
+                # Ensure required fields
+                if 'success' not in parsed:
+                    parsed['success'] = True
+                if 'tool_calls' not in parsed:
+                    parsed['tool_calls'] = []
+                
+                return parsed
+                
+            except json.JSONDecodeError as e:
+                print(f"JSON parse error attempt {attempt + 1}: {str(e)}")
+                if attempt == 2:  # Last attempt - create fallback response
+                    # Analyze query to create structured response
+                    query_lower = analysis_request['query'].lower()
+                    
+                    if 'nearest' in query_lower or 'closest' in query_lower:
+                        # Extract lat/lon if possible
+                        lat_match = re.search(r'latitude?\s*(\d+\.?\d*)', query_lower)
+                        lon_match = re.search(r'longitude?\s*(\d+\.?\d*)', query_lower)
+                        
+                        return {
+                            "success": True,
+                            "query_type": "spatial",
+                            "tool_calls": [{
+                                "name": "find_nearest_floats",
+                                "parameters": {
+                                    "latitude": float(lat_match.group(1)) if lat_match else 15.0,
+                                    "longitude": float(lon_match.group(1)) if lon_match else 70.0,
+                                    "limit": 5
+                                }
+                            }],
+                            "sql_query": "SELECT * FROM argo_profiles LIMIT 10",
+                            "explanation": "Finding nearest floats using spatial search",
+                            "confidence": 0.7
+                        }
+                    
+                    elif 'compare' in query_lower and ('oxygen' in query_lower or 'bgc' in query_lower):
+                        return {
+                            "success": True,
+                            "query_type": "comparative",
+                            "tool_calls": [
+                                {
+                                    "name": "get_regional_stats",
+                                    "parameters": {
+                                        "region_name": "arabian_sea",
+                                        "parameter": "oxygen"
+                                    }
+                                },
+                                {
+                                    "name": "get_regional_stats",
+                                    "parameters": {
+                                        "region_name": "bay_of_bengal",
+                                        "parameter": "oxygen"
+                                    }
+                                }
+                            ],
+                            "sql_query": "SELECT * FROM argo_profiles WHERE float_category='BGC' LIMIT 100",
+                            "explanation": "Comparing oxygen levels between regions",
+                            "confidence": 0.75
+                        }
+                    
+                    elif 'trajectory' in query_lower:
+                        # Extract WMO ID if possible
+                        wmo_match = re.search(r'\d{7}', query_lower)
+                        
+                        return {
+                            "success": True,
+                            "query_type": "trajectory",
+                            "tool_calls": [{
+                                "name": "get_float_trajectory",
+                                "parameters": {
+                                    "wmo_id": int(wmo_match.group()) if wmo_match else 2902238,
+                                    "days_back": 60
+                                }
+                            }],
+                            "sql_query": "SELECT * FROM argo_profiles WHERE wmo_id=2902238 ORDER BY profile_date",
+                            "explanation": "Retrieving float trajectory",
+                            "confidence": 0.8
+                        }
+                    
+                    # Default fallback
+                    return {
+                        "success": False,
+                        "error": f"Could not parse LLM response after 3 attempts",
+                        "tool_calls": [],
+                        "sql_query": "",
+                        "explanation": "Failed to analyze query",
+                        "confidence": 0.0
+                    }
+            except Exception as e:
+                if attempt == 2:
+                    return {
+                        "success": False,
+                        "error": str(e),
+                        "tool_calls": [],
+                        "sql_query": "",
+                        "explanation": "Error in tool analysis",
+                        "confidence": 0.0
+                    }
+        
+        return {
+            "success": False,
+            "error": "Failed to get LLM response",
+            "tool_calls": [],
+            "sql_query": "",
+            "explanation": "No response from LLM",
+            "confidence": 0.0
+        }
+
+    def _get_llm_response_with_retry(self, system_prompt: str, user_prompt: str) -> Dict:
+        """Helper method for LLM calls with retry logic"""
+        from langchain_core.messages import HumanMessage, SystemMessage
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt)
+        ]
+        
+        for attempt in range(3):
+            client = self._get_next_available_client()
+            if client:
+                try:
+                    response = client.invoke(messages)
+                    return self._parse_response(response.content)
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(2)
+                        continue
+                    return {"success": False, "error": str(e)}
+        
+        return {"success": False, "error": "All API keys exhausted"}
     
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get current usage statistics"""

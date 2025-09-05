@@ -44,7 +44,7 @@ class SupabaseClient:
             print(f"Query: {sql_query[:200]}...")
             
             # Execute raw SQL query using RPC or direct query
-            result = self.client.rpc('execute_sql', {'query': sql_query}).execute()
+            result = self.client.rpc('execute_safe_sql', {'query_text': sql_query}).execute()
             
             if result.data:
                 print(f"✅ Query executed successfully, returned {len(result.data)} rows")

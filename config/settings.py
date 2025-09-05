@@ -59,6 +59,21 @@ class Config:
         'modeBarButtonsToRemove': ['pan2d', 'lasso2d']
     }
     
+    # MCP Configuration
+    MCP_ENABLED = True
+    MCP_COMPLEXITY_THRESHOLD = 2  # Number of operations to trigger MCP
+    MCP_TOOL_TIMEOUT = 30  # seconds
+    MCP_MAX_TOOLS_PER_QUERY = 5
+
+    # RPC Function Names
+    RPC_FUNCTIONS = {
+        "execute_safe_sql": "execute_safe_sql",
+        "find_nearest_floats": "find_nearest_floats",
+        "get_regional_statistics": "get_regional_statistics",
+        "compare_profile_parameters": "compare_profile_parameters",
+        "get_float_trajectory": "get_float_trajectory"
+    }
+    
     @classmethod
     def validate_config(cls):
         """Validate configuration settings"""
