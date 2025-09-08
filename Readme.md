@@ -367,7 +367,7 @@ We welcome contributions! Please see our Contributing Guide for details.
 
 ```bash
 # Fork and clone
-git clone https://github.com/YOUR_USERNAME/FloatChat.git
+git clone https://github.com/AnshAggr1303/FloatChat.git
 
 # Create feature branch
 git checkout -b feature/amazing-feature
@@ -403,5 +403,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 📞 Contact & Support
 
 - **GitHub Issues**: [Report bugs](https://github.com/AnshAggr1303/FloatChat/issues)
-- **Email**: anshagarwal7777@gmail.com
-- **LinkedIn**: [Ansh Agrawal](https://linkedin.com/in/ansh-agrawal)
+- **Email**: anshagrawal148@gmail.com
+- **LinkedIn**: [Ansh Agrawal](https://www.linkedin.com/in/ansh-agrawal-a69866298/)
