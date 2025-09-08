@@ -1,6 +1,7 @@
 """
 ARGO FloatChat AI - Streamlit Frontend
 Enhanced with proper data visualization and export capabilities
+Fixed: Added unique keys and auto-scroll to keep input visible
 """
 import streamlit as st
 import requests
@@ -25,6 +26,59 @@ st.set_page_config(
     layout="wide"
 )
 
+# Custom CSS to ensure chat input stays visible
+st.markdown("""
+<style>
+    /* Ensure chat input is always visible */
+    .stChatFloatingInputContainer {
+        position: sticky;
+        bottom: 0;
+        background-color: var(--background-color);
+        z-index: 999;
+    }
+    
+    /* Add padding at bottom to prevent content hiding behind input */
+    .main .block-container {
+        padding-bottom: 100px;
+    }
+    
+    /* Smooth scrolling */
+    html {
+        scroll-behavior: smooth;
+    }
+</style>
+
+<script>
+    // Function to scroll to bottom
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.body.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+    
+    // Auto-scroll when new content is added
+    const observer = new MutationObserver(() => {
+        const chatInput = document.querySelector('[data-testid="stChatInput"]');
+        if (chatInput && !isInViewport(chatInput)) {
+            chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }
+    });
+    
+    function isInViewport(element) {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
+        );
+    }
+    
+    // Start observing when DOM is ready
+    if (document.body) {
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+</script>
+""", unsafe_allow_html=True)
+
 # Initialize session state
 if 'session_id' not in st.session_state:
     st.session_state.session_id = None
@@ -32,6 +86,8 @@ if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 if 'current_data' not in st.session_state:
     st.session_state.current_data = None
+if 'auto_scroll' not in st.session_state:
+    st.session_state.auto_scroll = False
 
 def create_session():
     """Create new API session"""
@@ -64,7 +120,7 @@ def process_query(query: str):
         st.error(f"Connection error: {e}")
         return None
 
-def render_profile_visualization(profiles_data):
+def render_profile_visualization(profiles_data, unique_key=""):
     """Render profile plots with Plotly"""
     if not profiles_data or not profiles_data.get('data'):
         st.warning("No profile data available for visualization")
@@ -136,7 +192,8 @@ def render_profile_visualization(profiles_data):
                 showlegend=True
             )
             
-            st.plotly_chart(fig, use_container_width=True)
+            # Add unique key to prevent duplicate element ID errors
+            st.plotly_chart(fig, use_container_width=True, key=f"profile_chart_{unique_key}_{idx}")
             
             # Profile info
             col1, col2, col3 = st.columns(3)
@@ -340,6 +397,7 @@ def main():
         for q in spatial_queries:
             if st.button(q, key=f"spatial_{q[:10]}"):
                 st.session_state.pending_query = q
+                st.session_state.auto_scroll = True
         
         st.subheader("📊 Profiles")
         profile_queries = [
@@ -349,6 +407,7 @@ def main():
         for q in profile_queries:
             if st.button(q, key=f"profile_{q[:10]}"):
                 st.session_state.pending_query = q
+                st.session_state.auto_scroll = True
         
         st.subheader("📈 Analysis")
         analysis_queries = [
@@ -358,43 +417,10 @@ def main():
         for q in analysis_queries:
             if st.button(q, key=f"analysis_{q[:10]}"):
                 st.session_state.pending_query = q
+                st.session_state.auto_scroll = True
     
     # Main chat interface
     st.header("💬 Query Interface")
-    
-    # Handle pending query from sidebar
-    if hasattr(st.session_state, 'pending_query'):
-        query = st.session_state.pending_query
-        del st.session_state.pending_query
-    else:
-        query = st.chat_input("Ask about ARGO float data...")
-    
-    # Process query
-    if query:
-        # Add to chat history
-        st.session_state.chat_history.append({
-            "role": "user",
-            "content": query,
-            "timestamp": datetime.now()
-        })
-        
-        # Get response
-        with st.spinner("🔍 Processing query..."):
-            response = process_query(query)
-        
-        if response and response.get('success'):
-            # Use summary if available, otherwise format a response
-            response_text = response.get('summary') or format_response_text(query, response)
-
-            # Add response to chat
-            st.session_state.chat_history.append({
-                "role": "assistant",
-                "content": response_text,
-                "data": response.get('data', {}),  # Pass only the data object
-                "execution_path": response.get('execution_path'),
-                "timestamp": datetime.now()
-            })
-            st.session_state.current_data = response.get('data', {})
     
     # Display chat history
     for idx, message in enumerate(st.session_state.chat_history):
@@ -436,12 +462,14 @@ def main():
                     
                     if has_profiles:
                         with tab_objects[tab_idx]:
-                            render_profile_visualization(data.get('profiles'))
+                            # Pass unique key based on message index
+                            render_profile_visualization(data.get('profiles'), unique_key=f"msg_{idx}")
                         tab_idx += 1
                     
                     if has_geo:
                         with tab_objects[tab_idx]:
-                            render_map_visualization(data.get('geospatial'))
+                            # Pass unique key for map
+                            render_map_visualization(data.get('geospatial'), unique_key=f"msg_{idx}")
                         tab_idx += 1
                     
                     if has_stats:
@@ -451,7 +479,8 @@ def main():
                     
                     if has_trajectory:
                         with tab_objects[tab_idx]:
-                            render_trajectory_visualization(data.get('trajectory'))
+                            # Pass unique key for trajectory
+                            render_trajectory_visualization(data.get('trajectory'), unique_key=f"msg_{idx}")
                         tab_idx += 1
                     
                     if has_table:
@@ -465,8 +494,66 @@ def main():
                         export_data(data, 
                                     f"argo_{message['timestamp'].strftime('%Y%m%d')}",
                                     unique_key=f"{idx}_{message['timestamp'].strftime('%Y%m%d%H%M%S')}")
+    
+    # Add scroll anchor and some padding
+    st.markdown('<div id="bottom" style="padding: 20px;"></div>', unsafe_allow_html=True)
+    
+    # Handle auto-scroll after sample query click
+    if st.session_state.auto_scroll:
+        st.markdown("""
+            <script>
+                // Scroll to bottom to show chat input
+                setTimeout(function() {
+                    window.scrollTo(0, document.body.scrollHeight);
+                    // Also try to focus the chat input
+                    const chatInput = document.querySelector('[data-testid="stChatInput"] input');
+                    if (chatInput) {
+                        chatInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        chatInput.focus();
+                    }
+                }, 100);
+            </script>
+        """, unsafe_allow_html=True)
+        st.session_state.auto_scroll = False
+    
+    # Handle pending query from sidebar
+    if hasattr(st.session_state, 'pending_query'):
+        query = st.session_state.pending_query
+        del st.session_state.pending_query
+    else:
+        query = st.chat_input("Ask about ARGO float data...")
+    
+    # Process query
+    if query:
+        # Add to chat history
+        st.session_state.chat_history.append({
+            "role": "user",
+            "content": query,
+            "timestamp": datetime.now()
+        })
+        
+        # Get response
+        with st.spinner("🔍 Processing query..."):
+            response = process_query(query)
+        
+        if response and response.get('success'):
+            # Use summary if available, otherwise format a response
+            response_text = response.get('summary') or format_response_text(query, response)
 
-def render_map_visualization(geospatial_data):
+            # Add response to chat
+            st.session_state.chat_history.append({
+                "role": "assistant",
+                "content": response_text,
+                "data": response.get('data', {}),  # Pass only the data object
+                "execution_path": response.get('execution_path'),
+                "timestamp": datetime.now()
+            })
+            st.session_state.current_data = response.get('data', {})
+            
+        # Trigger rerun to show new messages
+        st.rerun()
+
+def render_map_visualization(geospatial_data, unique_key=""):
     """Render map with Folium"""
     if not geospatial_data:
         return
@@ -501,8 +588,8 @@ def render_map_visualization(geospatial_data):
             icon=folium.Icon(color=color, icon='info-sign')
         ).add_to(m)
     
-    # Display map
-    st_folium(m, height=500, width=None, returned_objects=[])
+    # Display map with unique key
+    st_folium(m, height=500, width=None, returned_objects=[], key=f"map_{unique_key}")
 
 def render_statistics_visualization(stats_data):
     """Render statistics visualization"""
@@ -541,7 +628,7 @@ def render_statistics_visualization(stats_data):
                 if 'date_range' in region_data:
                     st.caption(f"Period: {region_data['date_range'].get('earliest', '')[:10]} to {region_data['date_range'].get('latest', '')[:10]}")
 
-def render_trajectory_visualization(trajectory_data):
+def render_trajectory_visualization(trajectory_data, unique_key=""):
     """Render trajectory visualization"""
     if not trajectory_data:
         return
@@ -563,7 +650,8 @@ def render_trajectory_visualization(trajectory_data):
             height=500
         )
         
-        st.plotly_chart(fig, use_container_width=True)
+        # Add unique key to prevent duplicate element ID errors
+        st.plotly_chart(fig, use_container_width=True, key=f"trajectory_chart_{unique_key}")
         
         # Stats
         col1, col2, col3 = st.columns(3)

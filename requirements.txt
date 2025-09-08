@@ -1,23 +1,51 @@
-# Minimal working set - No ChromaDB dependency conflicts
-streamlit
-pandas
-numpy  
-plotly
-python-dotenv
-psycopg2-binary
-requests
-scikit-learn  # For TF-IDF similarity search
+# Updated requirements.txt
 
-# LangChain essentials (minimal)
-langchain-groq
-langchain-core
+```txt
+# Core Dependencies
+streamlit==1.28.2
+pandas==2.1.3
+numpy==1.24.3
+plotly==5.18.0
+python-dotenv==1.0.0
 
 # Database
-supabase
+psycopg2-binary==2.9.9
+supabase==2.0.3
+sqlalchemy==2.0.23
 
-# API server for Next.js integration
-fastapi
-uvicorn[standard]
+# API Server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.2
 
-# Basic utilities
-json5
+# LLM & AI
+langchain-groq==0.0.1
+langchain-core==0.1.3
+groq==0.3.0
+
+# Embeddings & RAG
+sentence-transformers==2.2.2
+chromadb==0.4.18
+scikit-learn==1.3.2
+
+# Visualization
+folium==0.15.0
+streamlit-folium==0.15.1
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Utilities
+requests==2.31.0
+aiohttp==3.9.1
+asyncio==3.4.3
+json5==0.9.14
+
+# Data Processing
+scipy==1.11.4
+xarray==2023.12.0
+netCDF4==1.6.5
+
+# Development (optional)
+pytest==7.4.3
+black==23.12.0
+flake8==6.1.0
