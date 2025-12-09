@@ -61,7 +61,7 @@ class SupabaseClient:
     def _execute_query_alternative(self, sql_query: str) -> List[Dict[str, Any]]:
         """Alternative query execution method using table operations"""
         try:
-            # Parse query type and table
+            # Parse query types and table
             sql_upper = sql_query.upper()
             
             if 'FROM PUBLIC.ARGO_PROFILES' in sql_upper or 'FROM ARGO_PROFILES' in sql_upper:
@@ -81,7 +81,7 @@ class SupabaseClient:
     def _query_profiles_table(self, sql_query: str) -> List[Dict[str, Any]]:
         """Query argo_profiles table using Supabase filters"""
         try:
-            # Start with base query
+            # Start with base queries
             query = self.client.table('argo_profiles').select('*')
             
             # Parse common WHERE conditions
@@ -155,7 +155,7 @@ class SupabaseClient:
         try:
             # This is a simplified approach - in production you'd want more sophisticated JOIN handling
             
-            # Get profiles data
+            # Get profile datas
             profiles_query = self.client.table('argo_profiles').select('*').limit(50)
             profiles_result = profiles_query.execute()
             
