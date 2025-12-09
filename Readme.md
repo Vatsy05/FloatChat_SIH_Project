@@ -392,7 +392,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- **ARGO Program** - For providing global oceanographic data
+- **ARGO Program** - For providing oceanographic data
 - **Groq** - For high-performance LLM inference
 - **Supabase** - For managed PostgreSQL hosting
 - **PostGIS** - For spatial database capabilities
