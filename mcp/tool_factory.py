@@ -64,7 +64,7 @@ class MCPToolFactory:
             category="statistical"
         ))
         
-        # 3. Profile Comparison Tool
+        # 3. Comparison Tool
         self.registry.register_tool(ToolDefinition(
             name="compare_profiles",
             description="Compare parameters across multiple floats",
