@@ -29,7 +29,7 @@ class QueryRouter:
     async def route_query(self, user_query: str, session_context: str = "") -> Dict[str, Any]:
         """Route query to appropriate pipeline"""
         
-        # Determine query complexity
+        # Determine complexity of the query
         complexity = self._analyze_query_complexity(user_query)
         
         if complexity == "complex":
@@ -60,12 +60,12 @@ class QueryRouter:
             'trajectory', 'path', 'route'
         ]
         
-        # Check for MCP indicators
+        # Checking for MCP indicators
         for indicator in mcp_indicators:
             if indicator in query_lower:
                 return "complex"
         
-        # Check for multiple regions
+        # Checking for multiple regions
         regions_mentioned = sum([
             'arabian' in query_lower,
             'bengal' in query_lower,
