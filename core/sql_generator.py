@@ -265,7 +265,7 @@ class ArgoSQLGenerator:
         elif any(word in query_lower for word in ['map', 'location', 'position', 'geographic', 'nearest']):
             intent["query_type"] = "geographic"
         
-        # Detect parameters
+        # Detect the parameters
         parameter_mapping = {
             'temperature': ['temperature', 'temp', 'sst', 'sea surface temperature'],
             'salinity': ['salinity', 'sal', 'sss', 'sea surface salinity'],
@@ -283,7 +283,7 @@ class ArgoSQLGenerator:
         if 'temperature' in intent["parameters"] and 'pressure' not in intent["parameters"]:
             intent["parameters"].append('pressure')
         
-        # Detect regions
+        # Detect the regions
         if 'arabian sea' in query_lower or 'arabian' in query_lower:
             intent["region"] = "arabian_sea"
         elif 'bay of bengal' in query_lower or 'bengal' in query_lower:
