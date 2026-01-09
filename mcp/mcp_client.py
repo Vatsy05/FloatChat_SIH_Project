@@ -28,16 +28,16 @@ class ArgoMCPClient:
     async def process_query_with_tools(self, user_query: str, session_context: str = "") -> Dict[str, Any]:
         """Process query using MCP tools"""
         try:
-            # Step 1: Get context from RAG
+            # Step 1: Get contexts from RAG
             context_chunks = self.rag_system.retrieve_context(user_query, top_k=5)
             
-            # Step 2: Analyze query and determine tools
+            # Step 2: Analyze queries and determine tools
             analysis = await self._analyze_query_for_tools(user_query, context_chunks, session_context)
             
             if not analysis.get("success"):
                 return analysis
             
-            # Step 3: Execute suggested tools
+            # Step 3: Executing suggested tools
             tool_results = []
             for tool_call in analysis.get("tool_calls", []):
                 result = await self._execute_tool(tool_call)
