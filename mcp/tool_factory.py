@@ -38,7 +38,7 @@ class MCPToolFactory:
             category="spatial"
         ))
         
-        # 2. Regional Statistics Tool
+        # 2. Regional Statistics Tools
         self.registry.register_tool(ToolDefinition(
             name="get_regional_stats",
             description="Get statistical summary for a geographic region",
@@ -64,7 +64,7 @@ class MCPToolFactory:
             category="statistical"
         ))
         
-        # 3. Comparison Tool
+        # 3. Comparison Tools
         self.registry.register_tool(ToolDefinition(
             name="compare_profiles",
             description="Compare parameters across multiple floats",
@@ -88,7 +88,7 @@ class MCPToolFactory:
             category="comparison"
         ))
         
-        # 4. Float Trajectory Tool
+        # 4. Float Trajectory Tools
         self.registry.register_tool(ToolDefinition(
             name="get_float_trajectory",
             description="Get trajectory path of a specific float",
@@ -104,7 +104,7 @@ class MCPToolFactory:
             category="trajectory"
         ))
         
-        # 5. Execute Safe SQL Tool
+        # 5. Execute Safe SQL Tools
         self.registry.register_tool(ToolDefinition(
             name="execute_validated_query",
             description="Execute validated SQL query with safety checks",
