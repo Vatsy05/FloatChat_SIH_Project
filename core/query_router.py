@@ -43,7 +43,7 @@ class QueryRouter:
         """Analyze query to determine complexity"""
         query_lower = query.lower()
         
-        # Indicators for MCP routing
+        # Indicators for MCP routings
         mcp_indicators = [
             # Spatial operations
             'nearest', 'closest', 'nearby', 'around', 'within',
@@ -60,7 +60,7 @@ class QueryRouter:
             'trajectory', 'path', 'route'
         ]
         
-        # Checking for MCP indicators
+        # Checking for MCP indicator
         for indicator in mcp_indicators:
             if indicator in query_lower:
                 return "complex"
